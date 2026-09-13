@@ -36,6 +36,12 @@ def sample_graph() -> csr_matrix:
 
 def find_shortest_path(graph: csr_matrix, start: int, end: int) -> PathResult | None:
     """Find one shortest path with SciPy, or return ``None`` if unreachable."""
+    for name, node in (("start", start), ("end", end)):
+        if not 0 <= node < graph.shape[0]:
+            raise ValueError(
+                f"{name} node must be between 0 and {graph.shape[0] - 1}."
+            )
+
     if (graph.data < 0).any():
         raise ValueError("Dijkstra requires non-negative edge weights.")
 
