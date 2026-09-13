@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import sys
 from dataclasses import dataclass
 from math import isinf
 from typing import Sequence
@@ -35,6 +36,9 @@ def sample_graph() -> csr_matrix:
 
 def find_shortest_path(graph: csr_matrix, start: int, end: int) -> PathResult | None:
     """Find one shortest path with SciPy, or return ``None`` if unreachable."""
+    if (graph.data < 0).any():
+        raise ValueError("Dijkstra requires non-negative edge weights.")
+
     distances, predecessors = dijkstra(
         graph, directed=False, indices=start, return_predecessors=True
     )
@@ -43,8 +47,15 @@ def find_shortest_path(graph: csr_matrix, start: int, end: int) -> PathResult | 
         return None
 
     nodes = [end]
+    visited = {end}
     while nodes[-1] != start:
-        nodes.append(int(predecessors[nodes[-1]]))
+        predecessor = int(predecessors[nodes[-1]])
+        if predecessor in visited:
+            raise ValueError("Detected predecessor cycle while reconstructing path.")
+        if not 0 <= predecessor < graph.shape[0]:
+            raise ValueError("Invalid predecessor while reconstructing path.")
+        nodes.append(predecessor)
+        visited.add(predecessor)
     nodes.reverse()
     return PathResult(nodes=tuple(nodes), distance=distance)
 
@@ -56,7 +67,16 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser.add_argument("--end", type=int, default=3, help="end node (default: 3)")
     args = parser.parse_args(argv)
 
-    result = find_shortest_path(sample_graph(), args.start, args.end)
+    graph = sample_graph()
+    for name, node in (("start", args.start), ("end", args.end)):
+        if not 0 <= node < graph.shape[0]:
+            print(
+                f"error: {name} node must be between 0 and {graph.shape[0] - 1}.",
+                file=sys.stderr,
+            )
+            return 2
+
+    result = find_shortest_path(graph, args.start, args.end)
     if result is None:
         print(f"No path from {args.start} to {args.end}.")
     else:
