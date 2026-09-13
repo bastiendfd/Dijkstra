@@ -30,6 +30,20 @@ def test_rejects_negative_edge_weights_before_running_dijkstra(monkeypatch):
         find_shortest_path(graph, 0, 1)
 
 
+@pytest.mark.parametrize(
+    ("start", "end", "node_name"),
+    [
+        (-1, 0, "start"),
+        (0, -1, "end"),
+        (5, 0, "start"),
+        (0, 5, "end"),
+    ],
+)
+def test_direct_api_rejects_out_of_range_nodes_with_value_error(start, end, node_name):
+    with pytest.raises(ValueError, match=rf"{node_name} node must be between 0 and 4"):
+        find_shortest_path(sample_graph(), start, end)
+
+
 def test_rejects_cyclic_predecessors_during_path_reconstruction(monkeypatch):
     class CyclicPredecessors:
         def __init__(self):
